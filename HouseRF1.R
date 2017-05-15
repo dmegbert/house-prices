@@ -1,42 +1,10 @@
-#Let's predict some house prices!
-library(tidyverse)
-library(randomForest)
-library(mice)
 
-#setwd
-setwd("~/Rprojects/house-prices")
 
-#load in data
-train <- read.csv("./data/train.csv", stringsAsFactors = TRUE)
-test <- read.csv("./data/test.csv", stringsAsFactors = TRUE)
-View(test)
+#More variables need to be dropped... Let's read about it: https://www.analyticsvidhya.com/blog/2015/07/dimension-reduction-methods/
 
-#train IDs are 1-1460 (1460)
-#test IDs are 1461-2919 (1459)
-
-full <- bind_rows(train, test)
-View(full)
-
-missing.vars <- lapply(full, function(x) {
-  sum(is.na(x)) / 2919
-})
-
-missing.vars <- as.data.frame(t(missing.vars)) 
-View(missing.vars)
-
-#Let's drop some variables with > 30% NA
-full <- full %>%
-  select(-c(PoolQC, MiscFeature, Alley, Fence, FireplaceQu))
-
-missing.vars <- lapply(full, function(x) {
-  sum(is.na(x)) / 2919
-})
-
-missing.vars <- as.data.frame(missing.vars)
-missing.vars <- as.data.frame(t(missing.vars))
-View(missing.vars)
-
+#Find log of sale price to reduce effects of large spread in prices
 train$LogSalePrice[1:1460] <- log10(train$SalePrice)
+
 
 BxPlot <- function(z, data = train) {
   ggplot(data = data, mapping = aes(x = factor(z), y = LogSalePrice)) + 
@@ -70,3 +38,14 @@ train %>%
 ggplot(mapping = aes(x = LotFrontage, y = LogSalePrice)) +
   geom_point()
   
+#Let's just throw this in a RF and see what happens
+#split the data back into train and test
+
+train <- full[1:1460,]
+test <- full[1461:2919,]
+
+no.na.train <- train %>%
+  na.omit()
+
+rf.model1 <- randomForest(SalePrice ~ ., data = no.na.train)
+
